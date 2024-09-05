@@ -19,9 +19,13 @@
 策略同学报案：数据索引服务偶尔超时报错
 ![image](https://github.com/user-attachments/assets/480cc9d2-664d-45d2-a620-35e6b3cab15f)
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ODY5NzBkNjQyMzY1Y2NjZjAyMmNkMWVkMDE4YWI4MDdfNFJKUkVvYXVYWEdSdHZqRGNwbjI4aG9rd0NTUTFZeGJfVG9rZW46Ym94Y25Pb0ViUFQ4MGdLTnRwbktWcFNHS09mXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZWZlNjhkY2VkOTM3NDk1NTAwOWQ5ODAyYjNhZTY1NzFfZGZVeU1qN1BqRVIySDlIdHdPZGFxOFBHaW15anJ5ZkxfVG9rZW46Ym94Y25NUkNlTlJxRXZXb2Niczh1V0RHempjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
-
+<div align="center">
 图一：案发现场十点
+</div>
+
+![image](https://github.com/user-attachments/assets/f750fe74-4150-4f9a-93cf-869ec4030168)
+
+
 
 # 2. 案件分析
 
@@ -29,18 +33,18 @@
 
 - hive同步es时并发量设置的比较大，导致cpu飙升到80+
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZDY4NjQ0MDI5ODAxMTZiODM1ZTFlZTBjMTIyYWNkMDlfN2NHVmNBdEJoQmxjMTBsWUtNVWxWNUlnZmg3cjJ2bEVfVG9rZW46Ym94Y25OUjNkWVl4MjFYMTNlNkpZaXN6T1VmXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
+![image](https://github.com/user-attachments/assets/413e866e-20f1-4a81-8216-223c024470af)
 
 - es服务申请时，一共四个pod，每个pod规格：16核36G。当时硬盘申请了2T，按照es内存/索引(500G)大小 = 2/3的规范来看，申请的es-pod规格低了
 - 梳理策略组使用的字段时判断cert_name不会用于模糊搜索，所以当时es索引使用了keyword（不分词，主要用于等值搜索），通过日志发现，此字段也用了模糊搜索，导致es查询性能下降
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NzVmMGJhNTFmNzVlNjZhZDA2ZWZiZTlmZjhhODU2YTNfa29uNFB6d3hCQ3czWk5tMEdIbXY3a2U2TXJNNzU2cU1fVG9rZW46Ym94Y250M3REOUxGTjZCYWlINzZhU0dWeVpjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
+![image](https://github.com/user-attachments/assets/51d9a374-48c5-4993-8b46-252e773a64b4)
 
 - 视频召回时，调用es索引服务拼写的条件不符合常理。例如：
 
 （cert_name like '%用车%' or cert_name like '%汽车%' or cert_name like '%车%'）
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=MGQ0ZDQ0ZmJiYjU4OGQ4YTc4OTEzOGU4YmE2ZTNjMTVfOHM4Z0VBcDRlcENqcUJ4RUt1V3BQbjdtb2pGNjQ3Z2lfVG9rZW46Ym94Y244UkQ2TDhtQzJmVndzdDQ5OEZSQU1oXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
+![image](https://github.com/user-attachments/assets/d69d26bb-b3b3-4293-8aeb-a177e4891e9c)
 
 # 3. 锁定&捉拿凶手
 
@@ -48,7 +52,7 @@
 
 - 降低hive同步es的并发量，从3k改成了1.5k 
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NWJmOWVjYjFkMTNjNDExNjY0MGI2NWZmNmM1MGMwZmZfWFhOd0lWVnl6ZEdYU3hZcDI1aDhkVU1qVmlTQzdCY25fVG9rZW46Ym94Y25hbUVINzh0ZEFNSnhkemllRFFLZ1FXXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
+![image](https://github.com/user-attachments/assets/b9effe61-73a5-4d6f-b0c8-1f523d23e710)
 
 - 提升pod规格，16U32G ->32U64G
 - 修改索引，将cert_name的字段类型由keyword改成wildcard
@@ -72,7 +76,7 @@
 
 在了解wildcard之前，我们先了解一下es用到的分词器n-gram
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZjlkMTVkZDg0ZWIxYWI4MTQyNmMyMDIxNDdhYTk1ODBfaFFEOE9EZnd0Q0xFejZxMDlrdXdjM3pJUGRaQjZGbzFfVG9rZW46Ym94Y245ZFBuQ0N5NWc2MWhZS1hMbkx2THdjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
+![499ffc70-e776-41e8-8c29-319c224ff4f4](https://github.com/user-attachments/assets/e31e6699-1fc3-4f88-81bb-5deaa3fa7e28)
 
 | n-gram | 示例数据              | 分词结果                        | 备注 |
 | ------ | --------------------- | ------------------------------- | ---- |
@@ -88,10 +92,10 @@
 
 | 搜索条件              | profile解析的结果                                            | 搜索条件拆解后的执行顺序                                     |
 | --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 单字模糊搜索 "们"     | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NjIyMWNkNDY2ZDhhNjNkMWVjZjRlMjc0YjYyZmQ0YjZfQ2JHYkdtS0cwVU5iNngzaGtoZlNFU0NIN2hsOW5majVfVG9rZW46Ym94Y24wbGdjNmYxUm9SaXQ5Q1RwQlRycVRhXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) | match_all拿出原始数据进行正则匹配                            |
-| 俩字模糊搜索 "你们"   | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZGI5NTU4YTdlNTVkZTA0YTU3NTVmYWYzNGM5MDJmMWNfMlhvMzBRZGZYRkV5SkpGQ3gzdlhDbmdvTmJySnhFd1FfVG9rZW46Ym94Y25TdGZYaW8xY2x6QzRFdFNxbUZTbGxZXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) | 前缀匹配"你们*"拿出原始数据进行正则匹配                      |
-| 仨字模糊搜索 "你们好" | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=YzYzNzEyNDk3NGE3ODlmYzA4NThjYjNlOGE1NDkzMzZfNjlydGtDQUlIbW44UjFzMXVxcTJNdU8xeHZDYmZIbWtfVG9rZW46Ym94Y241RTRHQjV2aWpUUDVFNzlEQnpEeHE3XzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) | term匹配"你们好"拿出原始数据进行正则匹配                     |
-| 多字模糊搜索          | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=OTY1NWE0MTYxYzU4OWQxOGY4OTdmMmY4M2FiZDA5NDlfZ2dBZHI2Y1g1MjY5emZ2OG5uSWVjTzdrYmM2cHg2MXdfVG9rZW46Ym94Y25JUk1YWHA2ajJuM3FZdVlibWM3ckllXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) | 将搜索语句拆分成多组三个字的数据进行term匹配拿出原始数据进行正则匹配 |
+| 单字模糊搜索 "们"     | ![image](https://github.com/user-attachments/assets/ff3a279d-d984-43bb-99f9-24175a1b01ed) | match_all拿出原始数据进行正则匹配                            |
+| 俩字模糊搜索 "你们"   |![image](https://github.com/user-attachments/assets/8e577a62-dd5b-49f1-825d-fe9e860732ed) | 前缀匹配"你们*"拿出原始数据进行正则匹配                      |
+| 仨字模糊搜索 "你们好" | ![image](https://github.com/user-attachments/assets/9f16aa64-0609-407c-8bb1-7b90a8f7b7ae) | term匹配"你们好"拿出原始数据进行正则匹配                     |
+| 多字模糊搜索          | ![image](https://github.com/user-attachments/assets/8210fa18-f250-44aa-a708-ad250c47c77c) | 将搜索语句拆分成多组三个字的数据进行term匹配拿出原始数据进行正则匹配 |
 
 通过上面表格，我们有充分的理由推断出：wildcard类型字段在存储时会将数据按照3-gram分词+doc_value（原始的文档数据）
 
@@ -115,10 +119,10 @@
 
 此处提出两个问题供大家思考
 
-1. 当模糊搜索关键词长度是3的情况下，是否还需要进行doc_value正则匹配？
-2. 当模糊搜索关键词是“主流”时，es会先进前缀匹配“主流*”，但是“社会主义核心价值观之图书会主流”在分词时，由于主流是最后两个字，所以分词结果的最后一个三字结果是“会主流”，请问：当我搜索“主流”时能否搜出“社会主义核心价值观之图书会主流”？
+_1. 当模糊搜索关键词长度是3的情况下，是否还需要进行doc_value正则匹配？
+2. 当模糊搜索关键词是“主流”时，es会先进前缀匹配“主流*”，但是“社会主义核心价值观之图书会主流”在分词时，由于主流是最后两个字，所以分词结果的最后一个三字结果是“会主流”，请问：当我搜索“主流”时能否搜出“社会主义核心价值观之图书会主流”？_
 
-暂时无法在飞书文档外展示此内容
+<img width="752" alt="image" src="https://github.com/user-attachments/assets/0db1ac64-31f8-4f77-8a64-de6726e43f07">
 
 # 5. 逮捕计划
 
@@ -200,23 +204,27 @@
 
 | 查询方式                 | 耗时  | 证明                                                         | 备注           |
 | ------------------------ | ----- | ------------------------------------------------------------ | -------------- |
-| 旧的wildcard双字模糊搜索 | 6s    | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NWJhOWM3YzQ1NGVjODg1MTBlZmYxNmJiOGIyZjM5ZjZfZlAzbVRGWEZ2OHNZNUFmU1dRb3poNmlUUVZKdWpGN3pfVG9rZW46Ym94Y254RTNybXJFazlIVnhrSzFEYmFpNnhnXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) | 耗时相差800+倍 |
-| 新的term双字模糊搜索     | 6.8ms | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZWE4NTc0NTE3ZGM5MjViZjNjNjU1NmE2ZmM3M2IyNGFfT05mRlF0eFdhcVJkSXprZDZaaTdSendSWWwxdW1LSUJfVG9rZW46Ym94Y25YaHFuaGYwT0dWYUhzVW9yQTA3bERnXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) |                |
+| 旧的wildcard双字模糊搜索 | 6s    |![image](https://github.com/user-attachments/assets/5b3f6378-959c-481a-999c-986303e0dbb1) | 耗时相差800+倍 |
+| 新的term双字模糊搜索     | 6.8ms |![image](https://github.com/user-attachments/assets/16053b19-08d0-4c84-a6ba-cd8fe7a1a6ed) |                |
 |                          |       |                                                              |                |
-| 旧的wildcard单字模糊搜索 | 700ms | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=Mzc2ZDVlNTg2N2U5ZDNhNDgyMTM0NWM2ZjNkMTQ1MTFfNlo5RVNEOWFPOUZPemwxRmlKT0VFOU1XaEVRQkpzMUNfVG9rZW46Ym94Y25YdXRJanh5N2ZLb2p3VHZXNk9vVHliXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) | 相差100+倍     |
-| 新的term单字模糊搜索     | 5.5ms | ![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=Nzk1MWEzNWFmNTM5NTAyNjVjNTc5ZDExNzI4ZTczMGFfMXdVZW1HSnFUcWNJc1lYTGY5YnN1ZHVzTkNzRWVqb1BfVG9rZW46Ym94Y25obFRReXdPWnhMZXltZGhWejFLUEhWXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA) |                |
+| 旧的wildcard单字模糊搜索 | 700ms | ![image](https://github.com/user-attachments/assets/7e7743bc-bc6b-4f54-a387-647d2e47c867) | 相差100+倍     |
+| 新的term单字模糊搜索     | 5.5ms | ![image](https://github.com/user-attachments/assets/60c4c905-2ba2-46aa-97cd-b794806b667d) |                |
 
 上表中对比的仅仅是一个字段的模糊搜索。实际使用中，一次查询中可能会包含多个模糊查询
 
 **上线后的真实效果**
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=OTdmM2Y4ZGEwMGIxY2ZjYmRiNjE4YTQ2N2M5OTBhZTFfR1V6NUhkdUd6RmNUb3BBanBRTTh1dXRlZjJKcFRWSWVfVG9rZW46Ym94Y25aT0JhWE9yRWVnT1o5cW5jNWs4T0VBXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
-
+![image](https://github.com/user-attachments/assets/4d178527-4e96-4d29-940b-69a06e9638a6)
+<div align="center">
 09-15（上线前），99线
+</div>
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=M2MzMmYzNjllZjMyMjIzNDM4NzVhNzYwY2U2NWFhMTNfcUtqeHZqUmpwOGdtV0tqaFFuaHl0MnhQam0wd3JPOUdfVG9rZW46Ym94Y25NbG40OThNVjUwTTk5ZHJSWU9JMUJmXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
 
+![image](https://github.com/user-attachments/assets/a157a67b-eb4c-49e9-9ad0-e299aeecffac)
+<div align="center">
 09-16（上线后）,99线
+</div>
+
 
 | 监控时间           | MAX       | p99       |
 | ------------------ | --------- | --------- |
@@ -228,6 +236,8 @@
 1. p99耗时降低约 70% = 1 - ( 180ms / 600ms )
 2. 不再有突刺，MAX不会超过1s，降低了约  80% = 1 - ( 600ms / 3.5s )
 
-![img](https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=M2ExMjJkZmUwYzQzM2Y4NmQxOWM2ZjBlYTU0YjdiNWVfeFBNc1F0Z1JDQ1VmS09kQk1mZ08yckJUNEdFRkdwYnJfVG9rZW46Ym94Y25qWDFZTjRaNUJ6SmZKRjN4MDh4OWtjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA)
-
+![image](https://github.com/user-attachments/assets/6b890dee-54c7-4188-93c1-1fa61ed7471b)
+<div align="center">
 上线前后两天失败率
+</div>
+
