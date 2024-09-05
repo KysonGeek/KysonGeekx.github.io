@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html data-color-mode="light" data-dark-theme="dark" data-light-theme="light" lang="zh-CN">
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link href='https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/Primer/21.0.7/primer.css' rel='stylesheet' />
+    
+    <link rel="icon" href="https://github.githubassets.com/favicons/favicon.svg"><script>
+        let theme = localStorage.getItem("meek_theme") || "light";
+        document.documentElement.setAttribute("data-color-mode", theme);
+    </script>
+<meta name="description" content="作者：谢春霖
+链接：https://www.zhihu.com/question/304174916/answer/542373452
+来源：知乎
+著作权归作者所有。">
+<meta property="og:title" content="厉害的人如何分析问题">
+<meta property="og:description" content="作者：谢春霖
+链接：https://www.zhihu.com/question/304174916/answer/542373452
+来源：知乎
+著作权归作者所有。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://chenqx33.github.io/post/li-hai-de-ren-ru-he-fen-xi-wen-ti.html">
+<meta property="og:image" content="https://github.githubassets.com/favicons/favicon.svg">
+<title>厉害的人如何分析问题</title>
+
+
+
+</head>
+<style>
+body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;padding: 45px;font-size: 16px;font-family: sans-serif;line-height: 1.25;}
+#header{display:flex;padding-bottom:8px;border-bottom: 1px solid var(--borderColor-muted, var(--color-border-muted));margin-bottom: 16px;}
+#footer {margin-top:64px; text-align: center;font-size: small;}
+
+</style>
+
+<style>
+.postTitle{margin: auto 0;font-size:40px;font-weight:bold;}
+.title-right{display:flex;margin:auto 0 0 auto;}
+.title-right .circle{padding: 14px 16px;margin-right:8px;}
+#postBody{border-bottom: 1px solid var(--color-border-default);padding-bottom:36px;}
+#postBody hr{height:2px;}
+#cmButton{height:48px;margin-top:48px;}
+#comments{margin-top:64px;}
+.g-emoji{font-size:24px;}
+@media (max-width: 600px) {
+    body {padding: 8px;}
+    .postTitle{font-size:24px;}
+}
+
+</style>
+
+
+
+
+<body>
+    <div id="header">
+<h1 class="postTitle">厉害的人如何分析问题</h1>
+<div class="title-right">
+    <a href="https://chenqx33.github.io" id="buttonHome" class="btn btn-invisible circle" title="首页">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathHome" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+    <a href="https://github.com/chenqx33/chenqx33.github.io/issues/4" target="_blank" class="btn btn-invisible circle" title="Issue">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathIssue" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+
+    <a class="btn btn-invisible circle" onclick="modeSwitch();" title="切换主题">
+        <svg class="octicon" width="16" height="16" >
+            <path id="themeSwitch" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+
+</div>
+</div>
+    <div id="content">
+<div class="markdown-body" id="postBody"><p>作者：谢春霖<br>
+链接：<a href="https://www.zhihu.com/question/304174916/answer/542373452" rel="nofollow">https://www.zhihu.com/question/304174916/answer/542373452</a><br>
+来源：知乎<br>
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。</p>
+<p><strong>我先来举一个例子:</strong></p>
+<p>你发现最近summary打标模型有堆积现象，打算找刚聊一下，看看到底发生了什么、下一步该如何应对</p>
+<p>于是，我找到刚，问到：“刚，昨天晚上summary有堆积报警，你打算下一步怎么办？”</p>
+<p>刚：最近显卡不够用，处理能力上不去，我再去申请几张卡，我有信心，处理能力一定能上去</p>
+<p>你：加卡能解决问题吗，要不要关注一下单次请求的处理能力</p>
+<p>刚：生成式模型耗时长比较正常，加卡肯定能解决问题</p>
+<p>你心想有道理：okey</p>
+<p><strong>一个月过去了......</strong></p>
+<p>处理能力确实提升了，但堆积问题还是偶尔出现，于是刚又提出要加卡的请求。</p>
+<p><strong>怎么办？</strong></p>
+<p>再加卡能解决问题吗，不加卡满足不了业务。</p>
+<p>你焦头烂额......</p>
+<p><strong>为什么会这样？</strong></p>
+<p><strong>那是因为你只看到了「表面问题」，没有找到「本质问题」！</strong></p>
+<p>什么是表面问题？什么是本质问题？我们又该如何找到本质问题呢？</p>
+<p>要找到本质问题，我们得先看一下到底什么是「问题」，他是如何产生的。</p>
+<p><strong>比如我问你：什么是摇滚乐？</strong></p>
+<p>如果你不知道摇滚乐的含义，那么它对你来说就是个问题；而如果你的认知中，已经拥有了摇滚乐的认知，那么这对你来说就不是个问题，或者说，你已经解决了这个问题。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/7b5ba3fe-d12b-49f9-b799-68c60edb9cdf"><img width="787" alt="image" src="https://github.com/user-attachments/assets/7b5ba3fe-d12b-49f9-b799-68c60edb9cdf" style="max-width: 100%;"></a></p>
+<p>再比如，我问你「刚，为什么summary打标性能这么差？」</p>
+<p>这是一个问题吗？</p>
+<p>这就不一定了......</p>
+<p>如果说，刚给我承诺qps能达到5，但实际情况只有3，那么这就是个问题。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/4d27497e-c5f9-4183-871a-21441d04e428"><img width="787" alt="image" src="https://github.com/user-attachments/assets/4d27497e-c5f9-4183-871a-21441d04e428" style="max-width: 100%;"></a></p>
+<p>但是，如果目标qps=5，实际情况qps也是5，那么这就不是个问题。你听到后会反问我：「我哪里差了？！」</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/e692fff8-1f17-43c6-baec-6abd253e3861"><img width="790" alt="image" src="https://github.com/user-attachments/assets/e692fff8-1f17-43c6-baec-6abd253e3861" style="max-width: 100%;"></a></p>
+<p><strong>所以「问题」是什么？</strong></p>
+<p><strong>「问题」就是：期望与现状的落差部分。</strong></p>
+<p>假设某件事中期望值是（B），现状是（B'），那么（B'→B）这个落差部分就是问题。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/221cdfb9-9720-4cc1-b4bb-5411420e5de8"><img width="791" alt="image" src="https://github.com/user-attachments/assets/221cdfb9-9720-4cc1-b4bb-5411420e5de8" style="max-width: 100%;"></a></p>
+<p><strong>为什么我们常说：没有问题，就是最大的问题？</strong></p>
+<p>因为没有问题，就意味着你不知道目标在哪里，也不知道现状是什么，自然就不知道有什么问题，只是当一天和尚撞一天钟，随波逐流，一脸迷茫。</p>
+<p>比如你刚对一群人讲完一大段话，然后问大家还有没有问题。</p>
+<p>大家回答你：没有问题。</p>
+<p>你千万别天真地以为大家都听懂了，更大的可能是：大家不知道什么算真正地听懂了，以及为什么要听你说这一大段，他们没有一个期望值（B）；也不知道自己听懂了什么，没听懂什么，处在游离状态，找不到自己的现状（B'）。</p>
+<p>因此，不是他们完全听懂了，没有问题， 而是不知道自己有没有听懂，不知道什么算完全听懂，因而找不到这个「落差」在哪里，没有发现落差也就没有发现问题，所以只能回答：没有问题。</p>
+<p><strong>我们所有的解决办法，都应该是围绕（B'-&gt;B）的这个部分来展开思考的，找不到这个落差部分，我们的解决方案也就无从开始。</strong></p>
+<p>可是，很多人日常工作、生活中的交流并不是这样的，他们往往在还没弄清楚问题「是什么」中情况下，就急于开始给出自己的建议。</p>
+<p><strong>比如，前面的问题：「刚，为什么summary打标性能这么差？」</strong></p>
+<p>这个问题，其实就很模糊，性能怎么算差？目标是什么？现在性能是什么样？下滑的比例是多少？过去几天具体是什么情况？原来qps是5，现在变成了0.3；还是原来qps是5，现在下降到了4.5？</p>
+<p>虽然都是qps下降了，但这两个问题，显然是不同的问题：一个是要解决断崖式下跌；一个是要解决0.5的服务波动。那应该给出的解决方案当然是不同的。</p>
+<p>如果是第一个问题，那可能就需要搞大动作修复，比如彻查原因、紧急oncall、重写逻辑；而如果是第二个问题，那么扩容一下，也许就能解决。</p>
+<p><strong>因此，要解决一个问题，你得先弄明白问题到底是什么，别急于给方案。</strong></p>
+<p>不然，讨论的过程就会变成鸡同鸭讲，或者用高射炮打蚊子，发现了症状，却下错了药。</p>
+<p>那么，我们该如何精准地描述一个问题呢？</p>
+<p><strong>第一步：明确期望值（B）。</strong></p>
+<p>你的目标是什么？正常的情况应该是如何的？这个目标是可衡量的吗？</p>
+<p><strong>第二步：精准定位现状（B'）。</strong></p>
+<p>前面写的例子比较简单，现状很容易描述。ke显示情况可没有那么简单，要清晰地描述目前所处的位置，并不是一件容易的事。</p>
+<p>因为现状往往不是单一维度的，会涉及许多方面，比如上面summary性能问题，仅仅说qps是不够的，我们得从历史数据、bernard原理、kafka原理、等多个方面来全面描述。</p>
+<p>**我们在描述现状的时候，需要用大量的「事实」来构筑，而不是「观点」。**不然现状就会变得很模糊，你也就不知道现状与期望的落差（B'-&gt;B）具体在哪里了，给出的解决方案就自然会有偏差。</p>
+<p><strong>第三步：用（B'-&gt;B）这个落差，精准描述问题。</strong></p>
+<p>下一次，不能再问「刚，为什么summary打标性能这么差？」这样模糊的问题。因为你认为的差和他认为的差，也许并不一样。</p>
+<p>在他眼里可能20%的下跌，也许算正常波动，而你却以忧心忡忡。所以，你想让他给出方案，耳听到的确实感觉他在不断解释。</p>
+<p>你们在讨论的，并不是该如何提升服务性能的方法；你们在讨论的是，到底什么才算「差」。</p>
+<p><strong>那应该怎么问？</strong></p>
+<p>你应该这样说：「你之前三个周的qps分别是 5、4.5、5.1 ，而这周变成了3，我们来讨论一下，下个周如何能做到5.5」</p>
+<p>这样，问题就会很聚焦，开头的第一句话，也许就是个好办法！</p>
+<p><strong>一个问题，就像是一盏路灯，只会照亮下方的特定区域。</strong></p>
+<p>你要的答案，就像是一把迷失的钥匙，如果你想要找到他，就必须打开它上方的路灯。</p>
+<p>但如果你问错了问题，就像是开错了灯，就永远也找不回那把钥匙了。</p>
+<p><strong>提出一个精准的问题，是你能找到正确答案的第一步，也是最重要的一步！</strong></p>
+<p>好，问题描述清楚了，那我们该如何寻找答案呢？</p>
+<p><strong>从现状（B'）出发，找寻一条从（B'-&gt;B）的路径吗？</strong></p>
+<p>比如：人体正常温度（B）= 37℃，现状（B'）= 38.5℃，精准的问题描述就是：我现在体温是38.5℃，比正常体温（37℃）高了1.5℃，我发烧了，该如何降至 37℃？</p>
+<p>如果你的解决方案是从（B'）出发，那么得到的解决方案可能就是：冰敷，直接对头部降温；或者吃大量的冰块，把体温降下来。</p>
+<p><strong>可真正的问题是 38.5℃→3</strong>7<strong>℃这个差吗</strong>？</p>
+<p>不是！</p>
+<p>发烧，只是表面问题，而本质问题也许是细菌感染。</p>
+<p><strong>表面问题，只是由本质问题导致的症状，而我们常常把症状当成了问题本身，于是急于去消除它，而忽略了本质问题。</strong></p>
+<p>结果就是头疼医头，脚疼医脚。就算温度暂时降下来了，过一段时间又会升上去，真正的问题依然存在。</p>
+<p>summary模型加了很多张显卡，过一阵后依然还存在堆积问题。</p>
+<p><strong>看似当时有效，可没过多久，同样的问题又会反复出现，或者又引发了新的问题。</strong></p>
+<p>那么，我们该如何穿透表面问题，寻找本质问题呢？</p>
+<p><strong>答：别盯着问题看！</strong></p>
+<p>遇到问题，你要掌握足够的信息来精准地描述问题，这是第一步。</p>
+<p>但要解决这个问题，一定别盯着问题看，盯着症状是找不到答案的，或者只能找到治标不治本的方案。</p>
+<p><strong>这就像是门被锁住了，钥匙一定不在门上，你盯着钥匙孔看是没用的，你要到别处去找钥匙！</strong></p>
+<p><strong>那去哪里找呢？</strong></p>
+<p>我们先来看一下这个（B'）是如何产生的。</p>
+<p>比如，我们设定本周summary服务预期qps = 7。</p>
+<p>然后怎么办？每周的qps又不会自己长，所以我们同事要制定一个实现它的方案，我们家定这个方法是（A）。那么理想的状态应该是：做了（A）就能完成（B）。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/ac0f25ec-9b24-4571-8089-652a4391c986"><img width="734" alt="image" src="https://github.com/user-attachments/assets/ac0f25ec-9b24-4571-8089-652a4391c986" style="max-width: 100%;"></a></p>
+<p>（注：这里说的方法，包括了与之关联的人、事、物等。）</p>
+<p>可现在做了（A）之后，并没有达到预期的结果（B），而达到了（B'），这就产生了（B'-&gt;B）的这个落差。也就是我们看到的表面问题，或者称之为症状。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/76f62984-4823-4859-901c-5ff12fd18921"><img width="727" alt="image" src="https://github.com/user-attachments/assets/76f62984-4823-4859-901c-5ff12fd18921" style="max-width: 100%;"></a></p>
+<p>然后我们就开始分析，（B'）为什么会产生？结果发现了bernard服务的执行逻辑和预期不符，kafka还是顺序消费！</p>
+<p>这写因素，在我们当时指定（A）的时候，没有考虑进去，是一个在过程中突发的变量，我们称之为（C）。现状（B'）的出现，跟（C）脱不了干系！</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/19b4fc05-4b43-46c7-ae19-64e5a58bf9b8"><img width="734" alt="image" src="https://github.com/user-attachments/assets/19b4fc05-4b43-46c7-ae19-64e5a58bf9b8" style="max-width: 100%;"></a></p>
+<p>至此，我们发现，现状（B'）并不是凭空出现的，而是由三个因素的共同影响导致的：</p>
+<p>**A：为了实现（B）的结果，所使用的方法。**如果方法是错误的，目标自然无法达到。</p>
+<p>**B：期望值。**目标设置不当，或者目标设定过高，那么即使完美做到了 A，这个目标也无法达成。</p>
+<p>**C：过程中出现的变量。**方法和目标都没有问题，可是出现了意料之外的事，也可能导致目标无法达成</p>
+<p><strong>因此，（B'）只是症状，而导致这个症状出现的A、B、C这三个因素，他们才是更本质的问题。</strong></p>
+<p>所以，要解决这个问题，不能盯着（B'-&gt;B）看，而是要透过（B'）去看A、B、C，我称之为「透析三棱镜」。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/f477b7d8-8745-4be2-b3c7-e06fcfaf20e2"><img width="730" alt="image" src="https://github.com/user-attachments/assets/f477b7d8-8745-4be2-b3c7-e06fcfaf20e2" style="max-width: 100%;"></a></p>
+<p><strong>下面，我就来说一下，如何运用这个「透析三棱镜」来找到本质问题，并提出解决方案，一共分为三步。</strong></p>
+<p><strong>一、校准目标 B。</strong></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/494f5d3e-6f53-4616-9581-b5f94d977014"><img width="732" alt="image" src="https://github.com/user-attachments/assets/494f5d3e-6f53-4616-9581-b5f94d977014" style="max-width: 100%;"></a></p>
+<p><strong>没有清晰的目标，你认为的问题就会永远存在，永远达不成</strong>，导致整天感觉自己不幸福，却不知道该怎么办，随之而来的是间歇性的季度和持续性的焦虑</p>
+<p>那如何设定一个正确的目标呢？</p>
+<p>设立目标，一定要遵循SMART原则。</p>
+<p>什么是 SMART 原则？</p>
+<ul>
+<li><strong>S：Specific，明确的，具体的。</strong></li>
+</ul>
+<p>比如我女朋友的目标「我的目标是要幸福」</p>
+<p>这个目标本身没有错，只是办不到而已，因为幸福的定义不明确，所以不知道该做什么才能达成。</p>
+<p>那该怎么办呢？</p>
+<p>你想要幸福，就一定要有所行动，因此，<strong>你可以把这个目标用清晰明确的行动指引来替代。</strong></p>
+<p>比如：我的目标是有一份稳定的工作，有一个爱自己的老公，每周能一起去看一次电影，每年去旅行一次。</p>
+<ul>
+<li><strong>M：Measurable，可衡量的。</strong></li>
+</ul>
+<p>目标是否能达成，需要这个目标可以被衡量，比如我们的目标就是提升服务的稳定性，那么怎么样才算稳定呢？</p>
+<p>这个无法衡量。</p>
+<p><strong>你需要加上一组数据维度</strong>，比如说「服务可用率达到99.99%」，这样就能衡量是否达成了。</p>
+<ul>
+<li><strong>A：Achievable，（自力）可达到的。</strong></li>
+</ul>
+<p>这里要强调的一点是，<strong>目标的达成，一定是自己的力量可以控制的过程，而不能把目标达成与否寄托在他人或者你不可控的事情上。</strong></p>
+<p>比如，目标定为「下半年的够加薪」或者是「她能更喜欢我」，这些你不能控制，因为决定权在对方，你可以改成「连续两个月提升服务稳定性到99.99%」「提升自己对她的吸引力」。</p>
+<ul>
+<li><strong>R：Rewarding，完成后有满足感的。</strong></li>
+</ul>
+<p>不能设定太远的目标，那我就设定一个近一些的，容易实现的目标，可不可以呢？</p>
+<p>那你就需要衡量，当你完成这个目标的时候，<strong>是否能够满足你的存在感知层？</strong></p>
+<p>太近，太容易的目标，即便完成，你也不会有愉悦感和满足感，那么这就不是一个好目标，会让你在过程中失去对它的渴求，也就没有了动力。</p>
+<ul>
+<li><strong>T：time-bound，有时间限制的。</strong></li>
+</ul>
+<p>不同的时间限制，会导致你思维的方式、制定的计划完全不同。如果没有时间限制，这个目标就会成为一句口号，起不到任何作用。</p>
+<p>除了这5点之外，你在指定目标的过程中，还得注意以下两点：</p>
+<ul>
+<li>要用正面语言去描述</li>
+<li>你的目标不应该伤害他人，或者你的其他目标要与之保持整体的平衡。</li>
+</ul>
+<p>除了目标要遵循 SMART 原则外，你还得注意区分目标和手段。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/0ab30c66-c563-4456-9763-4ae5bd891c10"><img width="739" alt="image" src="https://github.com/user-attachments/assets/0ab30c66-c563-4456-9763-4ae5bd891c10" style="max-width: 100%;"></a></p>
+<p>我们使用方法 A 来达成目标 B，但往往在过程中，却把 A 本身当成了目标，这是怎么回事？</p>
+<p><strong>就比如读书这件事，你定了一个目标，一年要读50本书。</strong></p>
+<p>然后呢，具体要看什么书？历史，商业，还是文学？</p>
+<p>年中的时候，发现才读了 10 本书，下半年就开始奋起直追；到了年底，终于读完了 50 本书了，然后呢？发现好像也没学到什么，读完这 50 本书能干嘛呢？还是一脸迷茫。</p>
+<p>为什么会这样？</p>
+<p><strong>那是因为，读书是手段，并不是目的。</strong></p>
+<p>你不应该问：「读书是为了什么？」</p>
+<p>而是要问：「为了什么，我们需要读书？」</p>
+<ul>
+<li>可能是为了解决某个具体的问题；</li>
+<li>可能是为了要写一篇论文；</li>
+<li>也可能是要准备一场重要的演讲；</li>
+<li>......</li>
+</ul>
+<p>这样的读书才能有效果。</p>
+<p>读书，是让你达成某个目标的手段，但我们却常常把它当成目标本身。</p>
+<p>所以，当你遇到一个问题的时候，第一步应该先检查一下，你的目标是否符合 SMART 原则？你是否把手段本身当成了目标？</p>
+<p><strong>目标不对，什么都不对！</strong></p>
+<p><strong>二、重构方法 A。</strong></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/b0dc0b0c-1e17-4233-8162-46d711495827"><img width="736" alt="image" src="https://github.com/user-attachments/assets/b0dc0b0c-1e17-4233-8162-46d711495827" style="max-width: 100%;"></a></p>
+<p><strong>（A）是什么？</strong></p>
+<p><strong>（A）是你为了实现（B）所用的方法。（这个方法包括了与之相关的人、事、物。）</strong></p>
+<p>当出现了现状（B'），我们会习惯地再找一条从（B'）到（B）的途径，其实这是治标不治本的方法，结果常常让同样的问题重复出现，这个前面我们已经说过了。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/f99455dc-6719-4b0c-9553-f99b3afba3b0"><img width="732" alt="image" src="https://github.com/user-attachments/assets/f99455dc-6719-4b0c-9553-f99b3afba3b0" style="max-width: 100%;"></a></p>
+<p>从这个示意图中我们可以看到，现状（B'）不会平白无故地出现，而是由原来的解决方案（A）导致的。<strong>如果不改变原有的解决方案，现状就很难改变。</strong></p>
+<p><strong>比如</strong> 1861 年，清政府开始了长达 30 年的洋务运动，学习西方人的先进技术，可最终失败了；而几乎在同时期的日本，开始了明治维新，同样也是学习西方，结果却大货成功，一举超越中国，跻身世界列强，这是为什么？</p>
+<p>洋务运动的指导思想是**「师夷制夷、中体西用」，这八个字是什么意思呢？**</p>
+<p>「中体西用」也是一句简写，原话是「中学为体，西学为用」，意思是国家和社会的主体结构，还是维持原来的封建体制，维持儒家文化。这些不能动摇，在这个前提下，我们学习并应用西方的先进技术，以提升国力。</p>
+<p>听着是挺好的，洋务运动刚开始的时候，确实也办得风风火火，可越到后面阻力越大，这又是为什么？</p>
+<p><strong>这个就是在不改变原来 A 的情况下，强行去改（B'）。</strong></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/fa03c545-f2fc-4b8e-8ff8-8de4fd307696"><img width="731" alt="image" src="https://github.com/user-attachments/assets/fa03c545-f2fc-4b8e-8ff8-8de4fd307696" style="max-width: 100%;"></a></p>
+<p><strong>看上去「表面问题」很快得到了改善，但是原来的 A 并没有动摇，那些隐藏在表面之下的「本质问题」依然存在</strong>。</p>
+<p>洋枪洋炮是换上了，应该如何使用？士兵该如何训练？现代战争该如何打？</p>
+<p>洋枪洋炮是能自己仿造了，质量如何保证？产能如何提高？时间长了如何维修和更新？</p>
+<p>这些问题，需要国家的政治、军事、经济、商业、教育等一同改变，才能得以解决。</p>
+<p><strong>反观日本的明治维新则不同；</strong></p>
+<p>他们不仅仅是在科学技术、军事武装上学习西方，而是全盘的西化。</p>
+<p>建立新政府，改为君主立宪制政体，经济上推行「殖产兴业」，学习欧美技术，进行工业化浪潮，并且提倡「文明开化」、社会生活欧洲化，大力发展教育等等。</p>
+<p><strong>这是直接在（A）上动刀，真正推动了国家的整体变革。</strong></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/fb739b4a-4e01-4e2a-9188-31e6a3c096ed"><img width="790" alt="image" src="https://github.com/user-attachments/assets/fb739b4a-4e01-4e2a-9188-31e6a3c096ed" style="max-width: 100%;"></a></p>
+<p>所以，要想大幅度改变现状，或者达成全新的目标，就得把原来的（A）一起改了，而不是在（B'）点转弯。</p>
+<p>中国之后的崛起，也是因为原有的（A）被彻底摧毁了，虽然代价是惨痛的，但是从本质上解决问题，就不得不这样做。</p>
+<p><strong>重复原有的方法，只能得到同样的结果；想要有不同的结果，就需要用不同的方法。</strong></p>
+<p><strong>具体怎么做呢？当发现问题后，如何调整（A）？</strong></p>
+<p>回到summary的案例，当summary消息堆积后，不应该马上给出解决方案：增加显卡。<strong>而是回过头，去看看consumer、bernard是怎么实现的，也就是原来的（A）是怎么样的？</strong></p>
+<ul>
+<li>consumer调用bernard是否有限流？</li>
+<li>bernard是否是任务队列机制？</li>
+</ul>
+<p><strong>如果这些「consumer没有限流」不改变，只是单纯的增加2张显卡，那么依然还会出现消息堆积问题。</strong></p>
+<p><strong>三、消除变量</strong></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/8747a5c6-4946-4920-bc81-c7cdc7ec0268"><img width="733" alt="image" src="https://github.com/user-attachments/assets/8747a5c6-4946-4920-bc81-c7cdc7ec0268" style="max-width: 100%;"></a></p>
+<p><strong>如果（A、B）都没有问题了，（B'）还是存在，那么就是一定出现了变量（C）。</strong></p>
+<p>这个（C）可能是内部变量，比如，发现kafka一个消息挂了后续的消息都不消费了。</p>
+<p>这个（C）也可能是外部变量，比如，你平常非常注重身体的保养，控制饮食，保持运动，可还是感冒发烧了，那就不是（A）有问题，而是有可能被病毒感染了，这个不可预料的病毒入侵，就是变量（C）。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/89f6aff6-6adf-4494-a7eb-fd47716866f4"><img width="734" alt="image" src="https://github.com/user-attachments/assets/89f6aff6-6adf-4494-a7eb-fd47716866f4" style="max-width: 100%;"></a></p>
+<p><strong>那么我们该如何找到（C）呢？</strong></p>
+<p><strong>首先，你要建立一个寻找问题的基本思考框架：象、数、理。</strong></p>
+<p>这三个字出自《易经》，不过可以用作分析问题的口诀。</p>
+<p>那么「象、数、理」是什么意思？</p>
+<p>意思是：<strong>任何一个「现象」背后一定有「数据」，任何「数据」的变动，背后一定有「道理」。</strong></p>
+<p>也就到说，当你发现某个现象后，你要赶紧去找相关的数据，然后用「数据」来说明问题，这可以让你对事情从感性认知变成理性分析。</p>
+<p><strong>总之，把现象背后的数据分解得越细，看到的问题就会越精准。</strong></p>
+<p>有了明确的数据，我们才能寻找「导致数据变化背后的道理」是什么。</p>
+<p>怎么找到数据背后的道理？</p>
+<p><strong>我们可以使用「5Why 提问法」。</strong></p>
+<p>比如：</p>
+<p><strong>「为什么这个迭代bug是上个迭代了3倍？」</strong></p>
+<p>「因为最近需求突然变多，经常加班，晚上容易写bug。」</p>
+<p><strong>「为什么晚上容易写bug？」</strong></p>
+<p>「因为晚上注意力不集中。」</p>
+<p><strong>「为什么晚上注意力不集中？」</strong></p>
+<p>「因为偷偷看手机。」</p>
+<p><strong>「为什么半夜加班会偷偷看手机？」</strong></p>
+<p>「因为最近正好到世界杯……」</p>
+<p><strong>原来是世界杯这个外因，导致了你的代码质量下降！</strong></p>
+<p>然后怎么办？打电话给国际足联，让他人把世界杯取消了吗？</p>
+<p>发现根本原因后，你要把之后时改善行动落实在「自己可以改变」的事情上，你无法让世界杯暂停，但却可以砍需求，这样问题就能解决了。</p>
+<p>在电影《教父》的原著中，作者马里奥-普佐有一句经典的旁白：<strong>在一秒钟内看到本质的人</strong>**，和花半辈子也看不清一件事本质的人，自然是不一样的命运。**</p>
+<p>祝大家从今天开始，也能一眼看透本质，开启不同的命运！</p></div>
+<div style="font-size:small;margin-top:8px;float:right;"></div>
+
+<button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">评论</button>
+<div class="comments" id="comments"></div>
+
+</div>
+    <div id="footer"><div id="footer1">Copyright © <span id="copyrightYear"></span> <a href="https://chenqx33.github.io">浮生半日</a></div>
+<div id="footer2">
+    <span id="runday"></span><span>Powered by <a href="https://meekdai.com/Gmeek.html" target="_blank">Gmeek</a></span>
+</div>
+
+<script>
+var now=new Date();
+document.getElementById("copyrightYear").innerHTML=now.getFullYear();
+
+if(""!=""){
+    var startSite=new Date("");
+    var diff=now.getTime()-startSite.getTime();
+    var diffDay=Math.floor(diff/(1000*60*60*24));
+    document.getElementById("runday").innerHTML="网站运行"+diffDay+"天"+" • ";
+}
+</script></div>
+</body>
+<script>
+var IconList={'sun': 'M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V.75A.75.75 0 018 0zm0 13a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 018 13zM2.343 2.343a.75.75 0 011.061 0l1.06 1.061a.75.75 0 01-1.06 1.06l-1.06-1.06a.75.75 0 010-1.06zm9.193 9.193a.75.75 0 011.06 0l1.061 1.06a.75.75 0 01-1.06 1.061l-1.061-1.06a.75.75 0 010-1.061zM16 8a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0116 8zM3 8a.75.75 0 01-.75.75H.75a.75.75 0 010-1.5h1.5A.75.75 0 013 8zm10.657-5.657a.75.75 0 010 1.061l-1.061 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zm-9.193 9.193a.75.75 0 010 1.06l-1.06 1.061a.75.75 0 11-1.061-1.06l1.06-1.061a.75.75 0 011.061 0z', 'moon': 'M9.598 1.591a.75.75 0 01.785-.175 7 7 0 11-8.967 8.967.75.75 0 01.961-.96 5.5 5.5 0 007.046-7.046.75.75 0 01.175-.786zm1.616 1.945a7 7 0 01-7.678 7.678 5.5 5.5 0 107.678-7.678z', 'sync': 'M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z', 'home': 'M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z', 'github': 'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z'};
+var utterancesLoad=0;
+
+let themeSettings={
+    "dark": ["dark","moon","#00f0ff","dark-blue"],
+    "light": ["light","sun","#ff5000","github-light"],
+    "auto": ["auto","sync","","preferred-color-scheme"]
+};
+function changeTheme(mode, icon, color, utheme){
+    document.documentElement.setAttribute("data-color-mode",mode);
+    document.getElementById("themeSwitch").setAttribute("d",value=IconList[icon]);
+    document.getElementById("themeSwitch").parentNode.style.color=color;
+    if(utterancesLoad==1){utterancesTheme(utheme);}
+}
+function modeSwitch(){
+    let currentMode=document.documentElement.getAttribute('data-color-mode');
+    let newMode = currentMode === "light" ? "dark" : currentMode === "dark" ? "auto" : "light";
+    localStorage.setItem("meek_theme", newMode);
+    if(themeSettings[newMode]){
+        changeTheme(...themeSettings[newMode]);
+    }
+}
+function utterancesTheme(theme){
+    const message={type:'set-theme',theme: theme};
+    const iframe=document.getElementsByClassName('utterances-frame')[0];
+    iframe.contentWindow.postMessage(message,'https://utteranc.es');
+}
+if(themeSettings[theme]){changeTheme(...themeSettings[theme]);}
+console.log("\n %c Gmeek last https://github.com/Meekdai/Gmeek \n","padding:5px 0;background:#02d81d;color:#fff");
+</script>
+
+<script>
+document.getElementById("pathHome").setAttribute("d",IconList["home"]);
+document.getElementById("pathIssue").setAttribute("d",IconList["github"]);
+
+
+
+function openComments(){
+    cm=document.getElementById("comments");
+    cmButton=document.getElementById("cmButton");
+    cmButton.innerHTML="loading";
+    span=document.createElement("span");
+    span.setAttribute("class","AnimatedEllipsis");
+    cmButton.appendChild(span);
+
+    script=document.createElement("script");
+    script.setAttribute("src","https://utteranc.es/client.js");
+    script.setAttribute("repo","chenqx33/chenqx33.github.io");
+    script.setAttribute("issue-term","title");
+    
+    if(localStorage.getItem("meek_theme")=="dark"){script.setAttribute("theme","dark-blue");}
+    else if(localStorage.getItem("meek_theme")=="light") {script.setAttribute("theme","github-light");}
+    else{script.setAttribute("theme","preferred-color-scheme");}
+    
+    script.setAttribute("crossorigin","anonymous");
+    script.setAttribute("async","");
+    cm.appendChild(script);
+
+    int=self.setInterval("iFrameLoading()",200);
+}
+
+function iFrameLoading(){
+    var utterances=document.getElementsByClassName('utterances');
+    if(utterances.length==1){
+        if(utterances[0].style.height!=""){
+            utterancesLoad=1;
+            int=window.clearInterval(int);
+            document.getElementById("cmButton").style.display="none";
+            console.log("utterances Load OK");
+        }
+    }
+}
+
+
+
+</script>
+<script src='https://blog.meekdai.com/Gmeek/plugins/lightbox.js'></script><script src='https://blog.meekdai.com/Gmeek/plugins/GmeekTOC.js'></script>
+
+</html>
