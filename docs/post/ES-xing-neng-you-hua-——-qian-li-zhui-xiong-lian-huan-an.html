@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html data-color-mode="light" data-dark-theme="dark" data-light-theme="light" lang="zh-CN">
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link href='https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/Primer/21.0.7/primer.css' rel='stylesheet' />
+    
+    <link rel="icon" href="https://github.githubassets.com/favicons/favicon.svg"><script>
+        let theme = localStorage.getItem("meek_theme") || "light";
+        document.documentElement.setAttribute("data-color-mode", theme);
+    </script>
+<meta name="description" content="> ES支持多种查询模式，其中应用较为广泛的是模糊查询，它也导致多种性能问题。">
+<meta property="og:title" content="ES性能优化——千里追凶连环案">
+<meta property="og:description" content="> ES支持多种查询模式，其中应用较为广泛的是模糊查询，它也导致多种性能问题。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://chenqx33.github.io/post/ES-xing-neng-you-hua-%E2%80%94%E2%80%94-qian-li-zhui-xiong-lian-huan-an.html">
+<meta property="og:image" content="https://github.githubassets.com/favicons/favicon.svg">
+<title>ES性能优化——千里追凶连环案</title>
+<link href="//unpkg.com/@wooorm/starry-night@2.1.1/style/both.css" rel="stylesheet" />
+
+
+</head>
+<style>
+body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;padding: 45px;font-size: 16px;font-family: sans-serif;line-height: 1.25;}
+#header{display:flex;padding-bottom:8px;border-bottom: 1px solid var(--borderColor-muted, var(--color-border-muted));margin-bottom: 16px;}
+#footer {margin-top:64px; text-align: center;font-size: small;}
+
+</style>
+
+<style>
+.postTitle{margin: auto 0;font-size:40px;font-weight:bold;}
+.title-right{display:flex;margin:auto 0 0 auto;}
+.title-right .circle{padding: 14px 16px;margin-right:8px;}
+#postBody{border-bottom: 1px solid var(--color-border-default);padding-bottom:36px;}
+#postBody hr{height:2px;}
+#cmButton{height:48px;margin-top:48px;}
+#comments{margin-top:64px;}
+.g-emoji{font-size:24px;}
+@media (max-width: 600px) {
+    body {padding: 8px;}
+    .postTitle{font-size:24px;}
+}
+.copy-feedback {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 50px;
+    color: var(--color-fg-on-emphasis);
+    background-color: var(--color-fg-muted);
+    border-radius: 3px;
+    padding: 5px 8px;
+    font-size: 12px;
+}
+</style>
+
+
+
+
+<body>
+    <div id="header">
+<h1 class="postTitle">ES性能优化——千里追凶连环案</h1>
+<div class="title-right">
+    <a href="https://chenqx33.github.io" id="buttonHome" class="btn btn-invisible circle" title="首页">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathHome" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+    <a href="https://github.com/chenqx33/chenqx33.github.io/issues/2" target="_blank" class="btn btn-invisible circle" title="Issue">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathIssue" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+
+    <a class="btn btn-invisible circle" onclick="modeSwitch();" title="切换主题">
+        <svg class="octicon" width="16" height="16" >
+            <path id="themeSwitch" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+
+</div>
+</div>
+    <div id="content">
+<div class="markdown-body" id="postBody"><blockquote>
+<p>ES支持多种查询模式，其中应用较为广泛的是模糊查询，它也导致多种性能问题。读完此文后，你将会明白模糊查询在ES引擎中的底层实现逻辑，学会系统性排查ES性能问题，并能更好的设计ES-mapping、优化业务系统使用的ES-dsl语句。</p>
+</blockquote>
+<blockquote>
+<p>前情提要：为了解决召回服务查询dws慢的问题，我们引入了es，将hive表的数据按天分片导入es中，在这期间，凶手也悄悄潜入。通过本文，让我们来揭晓凶手的真实面目</p>
+<p>ES检索相关的名词解释：</p>
+<p>keyword——字符串类型，不支持分词（一般用于等值搜索）</p>
+<p>text——字符串类型，默认按照空格分词（一般用于模糊搜索）</p>
+<p>wildcard（字段类型）——通配符类型，分词+doc_value 支持正则匹配（用于正则匹配）</p>
+<p>wildcard（搜索关键词）—— 正则匹配，可以搭配text和wildcard（字段类型）使用</p>
+<p>doc_value——写入es的原始文档</p>
+</blockquote>
+<h1>1. 案发现场</h1>
+<p>策略同学报案：数据索引服务偶尔超时报错<br>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/480cc9d2-664d-45d2-a620-35e6b3cab15f"><img src="https://github.com/user-attachments/assets/480cc9d2-664d-45d2-a620-35e6b3cab15f" alt="image" style="max-width: 100%;"></a></p>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/35c304ed8d0901ca569cdaa8ef91e740eee3bec74b050611e3298eaa3f28aabb/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4f4459354e7a426b4e6a51794d7a593159324e6a5a6a41794d6d4e6b4d57566b4d444534595749344d4464664e464a4b556b5676595856595745645364485a7152474e77626a49346147397264304e545554465a65474a66564739725a573436596d39345932355062305669554651344d47644c546e5277626b745763464e485330396d587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/35c304ed8d0901ca569cdaa8ef91e740eee3bec74b050611e3298eaa3f28aabb/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4f4459354e7a426b4e6a51794d7a593159324e6a5a6a41794d6d4e6b4d57566b4d444534595749344d4464664e464a4b556b5676595856595745645364485a7152474e77626a49346147397264304e545554465a65474a66564739725a573436596d39345932355062305669554651344d47644c546e5277626b745763464e485330396d587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ODY5NzBkNjQyMzY1Y2NjZjAyMmNkMWVkMDE4YWI4MDdfNFJKUkVvYXVYWEdSdHZqRGNwbjI4aG9rd0NTUTFZeGJfVG9rZW46Ym94Y25Pb0ViUFQ4MGdLTnRwbktWcFNHS09mXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/07a7367982447494f25d11d45cfa0e55e96acc4c63d0a9d72845341c342ce46d/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a575a6c4e6a686b5932566b4f544d334e446b314e5441774f5751354f444179596a4e685a5459314e7a46665a475a56655531714e3142715256497953446c49644864505a4746784f46424861573135616e4a355a6b7866564739725a573436596d39345932354e556b4e6c546c4a7852585a5862324e69637a683156305248656d706a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/07a7367982447494f25d11d45cfa0e55e96acc4c63d0a9d72845341c342ce46d/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a575a6c4e6a686b5932566b4f544d334e446b314e5441774f5751354f444179596a4e685a5459314e7a46665a475a56655531714e3142715256497953446c49644864505a4746784f46424861573135616e4a355a6b7866564739725a573436596d39345932354e556b4e6c546c4a7852585a5862324e69637a683156305248656d706a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZWZlNjhkY2VkOTM3NDk1NTAwOWQ5ODAyYjNhZTY1NzFfZGZVeU1qN1BqRVIySDlIdHdPZGFxOFBHaW15anJ5ZkxfVG9rZW46Ym94Y25NUkNlTlJxRXZXb2Niczh1V0RHempjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<p>图一：案发现场十点</p>
+<h1>2. 案件分析</h1>
+<p>针对接口超时我们进行了内部分析，主要得出以下几个结论</p>
+<ul>
+<li>hive同步es时并发量设置的比较大，导致cpu飙升到80+</li>
+</ul>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/7277c69909b49204a6343fb9ef1453574565c8714e4eb37d6bac287a39856d7b/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a4459344e6a51304d4449354f4441784d545a694f444d315a54466c5a54426a4d54497959574e6b4d446c664e324e48566d4e4264454a6f516d786a4d5442735755744e565778574e556c6e5a6d6733636a4a3262455666564739725a573436596d39345932354f556a4e6b57566c344d6a46594d544e6c4e6b705a61584e365431566d587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/7277c69909b49204a6343fb9ef1453574565c8714e4eb37d6bac287a39856d7b/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a4459344e6a51304d4449354f4441784d545a694f444d315a54466c5a54426a4d54497959574e6b4d446c664e324e48566d4e4264454a6f516d786a4d5442735755744e565778574e556c6e5a6d6733636a4a3262455666564739725a573436596d39345932354f556a4e6b57566c344d6a46594d544e6c4e6b705a61584e365431566d587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZDY4NjQ0MDI5ODAxMTZiODM1ZTFlZTBjMTIyYWNkMDlfN2NHVmNBdEJoQmxjMTBsWUtNVWxWNUlnZmg3cjJ2bEVfVG9rZW46Ym94Y25OUjNkWVl4MjFYMTNlNkpZaXN6T1VmXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<ul>
+<li>es服务申请时，一共四个pod，每个pod规格：16核36G。当时硬盘申请了2T，按照es内存/索引(500G)大小 = 2/3的规范来看，申请的es-pod规格低了</li>
+<li>梳理策略组使用的字段时判断cert_name不会用于模糊搜索，所以当时es索引使用了keyword（不分词，主要用于等值搜索），通过日志发现，此字段也用了模糊搜索，导致es查询性能下降</li>
+</ul>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/5064ea7cd3a0bb64f5fb01ab1be4b92949cb07db23369ad5440507d951e132f5/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e7a566d4d474a684e54466d4e7a566c4e6a5a685a4441325a575a695a546c6d5a6a68684f44553259544e66613239754e464236643368435133637a576b35744d456449625859336132553254584a4e4e7a553263553166564739725a573436596d3934593235304d3352454f557847546a5a4359576c494e7a5a68553064576556706a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/5064ea7cd3a0bb64f5fb01ab1be4b92949cb07db23369ad5440507d951e132f5/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e7a566d4d474a684e54466d4e7a566c4e6a5a685a4441325a575a695a546c6d5a6a68684f44553259544e66613239754e464236643368435133637a576b35744d456449625859336132553254584a4e4e7a553263553166564739725a573436596d3934593235304d3352454f557847546a5a4359576c494e7a5a68553064576556706a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NzVmMGJhNTFmNzVlNjZhZDA2ZWZiZTlmZjhhODU2YTNfa29uNFB6d3hCQ3czWk5tMEdIbXY3a2U2TXJNNzU2cU1fVG9rZW46Ym94Y250M3REOUxGTjZCYWlINzZhU0dWeVpjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<ul>
+<li>视频召回时，调用es索引服务拼写的条件不符合常理。例如：</li>
+</ul>
+<p>（cert_name like '%用车%' or cert_name like '%汽车%' or cert_name like '%车%'）</p>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/d4f9ffcfc4c76156073dab33a79601820c962749ec7737616a8684cd9378a309/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d4751305a4451305a6d4a69596a55344f475134595463344f54457a4f475534596d45325a544e6a4d5456664f484d345a3056426344526c63454e7163554a345255743156334251626a6474623270474e6a51335a326c66564739725a573436596d393459323434556b513254446874517a4a6d566e647a644451354f455a535155316f587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/d4f9ffcfc4c76156073dab33a79601820c962749ec7737616a8684cd9378a309/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d4751305a4451305a6d4a69596a55344f475134595463344f54457a4f475534596d45325a544e6a4d5456664f484d345a3056426344526c63454e7163554a345255743156334251626a6474623270474e6a51335a326c66564739725a573436596d393459323434556b513254446874517a4a6d566e647a644451354f455a535155316f587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=MGQ0ZDQ0ZmJiYjU4OGQ4YTc4OTEzOGU4YmE2ZTNjMTVfOHM4Z0VBcDRlcENqcUJ4RUt1V3BQbjdtb2pGNjQ3Z2lfVG9rZW46Ym94Y244UkQ2TDhtQzJmVndzdDQ5OEZSQU1oXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<h1>3. 锁定&amp;捉拿凶手</h1>
+<p>针对上面的问题我们一一给出了逮捕方案</p>
+<ul>
+<li>降低hive同步es的并发量，从3k改成了1.5k</li>
+</ul>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/bb19046ff8c7223cfb531f7c6cdeda8c95d4329fe5fadc91daeb488fc7f1c7a2/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e574a6d4f57566a596a466b4d544e6a4e4445784e6a59304d4749324e575a6d4e6d4d314d474d775a6d5a665746684f64306c57566e6c365a4564595533685a634449316144686b56553171566d6c54517a644359323566564739725a573436596d393459323568625556494e7a68305a45464e536e686b656d6c6c5246464c5a314658587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/bb19046ff8c7223cfb531f7c6cdeda8c95d4329fe5fadc91daeb488fc7f1c7a2/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e574a6d4f57566a596a466b4d544e6a4e4445784e6a59304d4749324e575a6d4e6d4d314d474d775a6d5a665746684f64306c57566e6c365a4564595533685a634449316144686b56553171566d6c54517a644359323566564739725a573436596d393459323568625556494e7a68305a45464e536e686b656d6c6c5246464c5a314658587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NWJmOWVjYjFkMTNjNDExNjY0MGI2NWZmNmM1MGMwZmZfWFhOd0lWVnl6ZEdYU3hZcDI1aDhkVU1qVmlTQzdCY25fVG9rZW46Ym94Y25hbUVINzh0ZEFNSnhkemllRFFLZ1FXXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<ul>
+<li>提升pod规格，16U32G -&gt;32U64G</li>
+<li>修改索引，将cert_name的字段类型由keyword改成wildcard</li>
+<li>告诉策略同学，修改不符合常理的搜索条件。将超时时间由2s设置成10s</li>
+</ul>
+<h1>4. 隐藏在背后的真凶</h1>
+<blockquote>
+<p>初步解决方案实行后，hive同步es时，不再会有大规模的超时了，拨开云雾后，凶手也随之漏出了真面目</p>
+</blockquote>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>字段类型</th>
+<th>是否支持分词</th>
+<th>模糊搜索关键词</th>
+<th>优点</th>
+<th>缺点</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>keyword</td>
+<td>否</td>
+<td>wildcard</td>
+<td>等值搜索快，索引存储小</td>
+<td>支持等值，模糊搜索性能差、分词搜索</td>
+<td>适用于行业，标签等</td>
+</tr>
+<tr>
+<td>text</td>
+<td>是</td>
+<td>match，wildcard</td>
+<td>支持自定义分词器，支持模糊搜索，支持纠错搜索等</td>
+<td>索引存储大，模糊搜索可能不精准(默认按照空格分词，可以指定分词器，使用match搜索时只会对分词结果进行匹配；使用wildcard检索会导致cpu飙升不建议使用)</td>
+<td>适用于对于模糊搜索结果要求不严格的情况（允许部分结果，不符合模糊匹配）</td>
+</tr>
+<tr>
+<td>wildcard</td>
+<td>是</td>
+<td>wildcard</td>
+<td>新特性，优化了模糊搜索，支持正则</td>
+<td>索引存储大，单字，双字模糊搜索性能差，特耗cpu</td>
+<td>当前采用此方案</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p><em>模糊搜索字段类型选型对比</em></p>
+<p>上线一段时间后，发现每天都会有零星的接口超时，这次深入分析了一下耗时原因，定位在了单字模糊搜索。虽然 es7.9 之后新增了wildcard类型的字段进行优化正则匹配，但是各种野史还是不推荐使用wildcard进行搜索，主要一个原因是太耗cpu。在敢为极致字节范附体的情况下，又进一步探究wildcard的实现逻辑</p>
+<blockquote>
+<p>刚定位到单字模糊搜索时，和策略同学沟通过“能否去掉单字模糊搜索”。策略同学给出数据，去掉单字模糊搜索后会对采纳率有影响<a href="https://bytedance.feishu.cn/docs/doccnTdrVliyKBZ79D7IWfKu9uf" rel="nofollow">单字匹配搜索问题</a></p>
+</blockquote>
+<p>在了解wildcard之前，我们先了解一下es用到的分词器n-gram</p>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/3d703a0901049c0e0d927172ea83abce9a504b18bc49ec9b3dfb9993672bf6e4/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a6a6c6b4d54566b5a4467305a574978595749344d5451794e6d4d794d4449784e44646859546b314f444266614646454f4539455a6e643051307846656a5a784d446c726458646a4d33704a55475261516a5a47627a4666564739725a573436596d3934593234355a46427551304e354e5763324d57685a5331684d626b78325448646a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/3d703a0901049c0e0d927172ea83abce9a504b18bc49ec9b3dfb9993672bf6e4/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a6a6c6b4d54566b5a4467305a574978595749344d5451794e6d4d794d4449784e44646859546b314f444266614646454f4539455a6e643051307846656a5a784d446c726458646a4d33704a55475261516a5a47627a4666564739725a573436596d3934593234355a46427551304e354e5763324d57685a5331684d626b78325448646a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZjlkMTVkZDg0ZWIxYWI4MTQyNmMyMDIxNDdhYTk1ODBfaFFEOE9EZnd0Q0xFejZxMDlrdXdjM3pJUGRaQjZGbzFfVG9rZW46Ym94Y245ZFBuQ0N5NWc2MWhZS1hMbkx2THdjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>n-gram</th>
+<th>示例数据</th>
+<th>分词结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-gram</td>
+<td>你们，还好吗</td>
+<td>["你","们","还","好","吗"]</td>
+<td></td>
+</tr>
+<tr>
+<td>2-gram</td>
+<td>["你们""还好","好吗"]</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>3-gram</td>
+<td>["还好吗"]</td>
+<td>match搜索“你好”，能不能搜出来？</td>
+<td></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<pre class="notranslate"><code class="notranslate">真実はいつもひとつ
+</code></pre>
+<p>在使用profile命令解析wildcard的查询逻辑时现了背后的真凶</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>搜索条件</th>
+<th>profile解析的结果</th>
+<th>搜索条件拆解后的执行顺序</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单字模糊搜索 "们"</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/5e2a12ded3f55d273ba93704a497aecbaf25ebc3f47a17aec002a7dfd808c734/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e6a49794d574e6b4e4459325a4468684e6a4e6b4d57566a5a6a526c4d6a6330596a59795a6d5130596a5a6651324a48596b647453306377565535694e6e677a6147746f5a6c4e4655304e494e3268734f57356d616a5666564739725a573436596d3934593234776247646a4e6d5978556d39536158513551315277516c527963565268587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/5e2a12ded3f55d273ba93704a497aecbaf25ebc3f47a17aec002a7dfd808c734/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e6a49794d574e6b4e4459325a4468684e6a4e6b4d57566a5a6a526c4d6a6330596a59795a6d5130596a5a6651324a48596b647453306377565535694e6e677a6147746f5a6c4e4655304e494e3268734f57356d616a5666564739725a573436596d3934593234776247646a4e6d5978556d39536158513551315277516c527963565268587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NjIyMWNkNDY2ZDhhNjNkMWVjZjRlMjc0YjYyZmQ0YjZfQ2JHYkdtS0cwVU5iNngzaGtoZlNFU0NIN2hsOW5majVfVG9rZW46Ym94Y24wbGdjNmYxUm9SaXQ5Q1RwQlRycVRhXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td>match_all拿出原始数据进行正则匹配</td>
+</tr>
+<tr>
+<td>俩字模糊搜索 "你们"</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/1ab849834000e2ff96b4c3c51d9947893720796a48949f0f802c2bbe8b26fde3/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a4749354e5455345954646c4e54566b5a544130595455334e54566d5957597a4e474d354d444a6d4d574e664d6c68764d7a42525a475a59526b5635536b70475133677a646c6844626d6476546d4a79536e684664314666564739725a573436596d39345932355464475a596157387859327836517a524664464e7862555a546247785a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/1ab849834000e2ff96b4c3c51d9947893720796a48949f0f802c2bbe8b26fde3/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a4749354e5455345954646c4e54566b5a544130595455334e54566d5957597a4e474d354d444a6d4d574e664d6c68764d7a42525a475a59526b5635536b70475133677a646c6844626d6476546d4a79536e684664314666564739725a573436596d39345932355464475a596157387859327836517a524664464e7862555a546247785a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZGI5NTU4YTdlNTVkZTA0YTU3NTVmYWYzNGM5MDJmMWNfMlhvMzBRZGZYRkV5SkpGQ3gzdlhDbmdvTmJySnhFd1FfVG9rZW46Ym94Y25TdGZYaW8xY2x6QzRFdFNxbUZTbGxZXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td>前缀匹配"你们*"拿出原始数据进行正则匹配</td>
+</tr>
+<tr>
+<td>仨字模糊搜索 "你们好"</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/98e12948dcca17b6b709b1cc1ecbbe67afa410e86e5a41cb76b5ae0cf3acabee/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d597a597a4e7a45794e446b334e4745334f446c6d597a41344e54686a596a4e6c4f4745314e446b7a4d7a5a664e6a6c796447744451556c4962573434556a467a4d58567863544a4e6455387865485a44596d5a4962577466564739725a573436596d39345932343152545248516a563261577055554456464e7a6c45516e704565484533587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/98e12948dcca17b6b709b1cc1ecbbe67afa410e86e5a41cb76b5ae0cf3acabee/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d597a597a4e7a45794e446b334e4745334f446c6d597a41344e54686a596a4e6c4f4745314e446b7a4d7a5a664e6a6c796447744451556c4962573434556a467a4d58567863544a4e6455387865485a44596d5a4962577466564739725a573436596d39345932343152545248516a563261577055554456464e7a6c45516e704565484533587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=YzYzNzEyNDk3NGE3ODlmYzA4NThjYjNlOGE1NDkzMzZfNjlydGtDQUlIbW44UjFzMXVxcTJNdU8xeHZDYmZIbWtfVG9rZW46Ym94Y241RTRHQjV2aWpUUDVFNzlEQnpEeHE3XzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td>term匹配"你们好"拿出原始数据进行正则匹配</td>
+</tr>
+<tr>
+<td>多字模糊搜索</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/93e1822efa412e98813bd99a4d5c51475655b743cafd89187afa45b50f95809e/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4f5459314e5745304d545978597a55344f5751784f4759344f54646d4d6d59344d3246695a4441354e446c665a3264425a484932593167314d6a5935656d5a324f4735755357566a547a6472596d4d32634867324d586466564739725a573436596d39345932354a556b315957484132616a4a754d33465a64566c6962574d33636b6c6c587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/93e1822efa412e98813bd99a4d5c51475655b743cafd89187afa45b50f95809e/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4f5459314e5745304d545978597a55344f5751784f4759344f54646d4d6d59344d3246695a4441354e446c665a3264425a484932593167314d6a5935656d5a324f4735755357566a547a6472596d4d32634867324d586466564739725a573436596d39345932354a556b315957484132616a4a754d33465a64566c6962574d33636b6c6c587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=OTY1NWE0MTYxYzU4OWQxOGY4OTdmMmY4M2FiZDA5NDlfZ2dBZHI2Y1g1MjY5emZ2OG5uSWVjTzdrYmM2cHg2MXdfVG9rZW46Ym94Y25JUk1YWHA2ajJuM3FZdVlibWM3ckllXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td>将搜索语句拆分成多组三个字的数据进行term匹配拿出原始数据进行正则匹配</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>通过上面表格，我们有充分的理由推断出：wildcard类型字段在存储时会将数据按照3-gram分词+doc_value（原始的文档数据）</p>
+<p>理由如下：</p>
+<ul>
+<li>搜索词性能比对，term（等值搜索）&gt;前缀匹配</li>
+<li>模糊搜索三个字时用的是term</li>
+<li>模糊搜索超过三个字时，将搜索词拆成长度3的多个搜索词，并进行term</li>
+<li>第一次匹配后，再进行精准匹配，why？</li>
+</ul>
+<p>🌰 es字段中存储了一段文字：“社会主义核心价值观之图书会主流”</p>
+<blockquote>
+<p>分词后的结果：社会主、会主义……图书会、会主流</p>
+</blockquote>
+<p>当我模糊搜索“社会主流”时，es内部进行了如下步骤</p>
+<ol>
+<li>当进行到按照3-gram分词时，“社会主流”被分为“社会主”和“会主流”</li>
+<li>进行term匹配的时候，会将“社会主义核心价值观之图书会主流”匹配出来</li>
+<li>我们发现“社会主义核心价值观之图书会主流”中并没有包含“社会主流”这四个字</li>
+<li>所以最后一步需要对doc_value进行正则匹配</li>
+</ol>
+<p>此处提出两个问题供大家思考</p>
+<ol>
+<li>当模糊搜索关键词长度是3的情况下，是否还需要进行doc_value正则匹配？</li>
+<li>当模糊搜索关键词是“主流”时，es会先进前缀匹配“主流*”，但是“社会主义核心价值观之图书会主流”在分词时，由于主流是最后两个字，所以分词结果的最后一个三字结果是“会主流”，请问：当我搜索“主流”时能否搜出“社会主义核心价值观之图书会主流”？</li>
+</ol>
+<p>暂时无法在飞书文档外展示此内容</p>
+<h1>5. 逮捕计划</h1>
+<p>真凶的面目已经完全裸露出来了</p>
+<ul>
+<li>单字模糊搜索，matchAll对所有的doc_value进行正则匹配</li>
+<li>俩字模糊搜索，正则匹配前缀，对筛选出来的doc_value进行正则匹配</li>
+<li>仨个字以上模糊搜索，term匹配，对筛选出来的doc_value进行正则匹配，性能还行。不算凶手</li>
+</ul>
+<p>当我们一步一步分析到此时，逮捕方案也慢慢水到渠成，既然wildcard只用了3-gram，解决了大于两个字的模糊搜索，那我们为什么不用1~2gram来解决三个字以下的模糊搜索呢（能想到此方案有一个必备前提，es中可以对一个字段采用不同分词器分别解析存储）</p>
+<p>随后我们设计了新的es-mapping。以“primary_name”举例，既要用wildcard分词，也要用ngram分词</p>
+<div class="highlight highlight-source-json"><pre class="notranslate"><span class="pl-ii">//mapping</span>
+{
+    <span class="pl-ent">"primary_name"</span>: {
+        <span class="pl-ent">"type"</span>: <span class="pl-s"><span class="pl-pds">"</span>wildcard<span class="pl-pds">"</span></span>,
+        <span class="pl-ent">"fields"</span>: {
+            <span class="pl-ent">"ngram"</span>: {
+                <span class="pl-ent">"type"</span>: <span class="pl-s"><span class="pl-pds">"</span>text<span class="pl-pds">"</span></span>,
+                <span class="pl-ent">"analyzer"</span>: <span class="pl-s"><span class="pl-pds">"</span>ngram_analyzer<span class="pl-pds">"</span></span> 
+            }
+        }
+    }
+}
+<span class="pl-ii">//setting</span>
+{
+    <span class="pl-ent">"ngram_tokenizer"</span>: {
+        <span class="pl-ent">"token_chars"</span>: [ <span class="pl-ii">//将以下字符也包含在分词中</span>
+            <span class="pl-s"><span class="pl-pds">"</span>letter<span class="pl-pds">"</span></span>,
+            <span class="pl-s"><span class="pl-pds">"</span>digit<span class="pl-pds">"</span></span>,
+            <span class="pl-s"><span class="pl-pds">"</span>whitespace<span class="pl-pds">"</span></span>,
+            <span class="pl-s"><span class="pl-pds">"</span>punctuation<span class="pl-pds">"</span></span>,
+            <span class="pl-s"><span class="pl-pds">"</span>symbol<span class="pl-pds">"</span></span>
+        ],
+        <span class="pl-ent">"min_gram"</span>: <span class="pl-s"><span class="pl-pds">"</span>1<span class="pl-pds">"</span></span>,
+        <span class="pl-ent">"type"</span>: <span class="pl-s"><span class="pl-pds">"</span>ngram<span class="pl-pds">"</span></span>,
+        <span class="pl-ent">"max_gram"</span>: <span class="pl-s"><span class="pl-pds">"</span>2<span class="pl-pds">"</span></span>
+    }
+}</pre></div>
+<p>这样设计后</p>
+<ul>
+<li>对于三个字及以上的模糊搜索我们采用wildcard（term+doc_value）的方式</li>
+</ul>
+<div class="highlight highlight-source-json"><pre class="notranslate"><span class="pl-ii">//query dsl</span>
+{
+  <span class="pl-ent">"query"</span>: {
+    <span class="pl-ent">"wildcard"</span>: {
+      <span class="pl-ent">"primary_name"</span>: {
+        <span class="pl-ent">"wildcard"</span>: <span class="pl-s"><span class="pl-pds">"</span>*社会主义好*<span class="pl-pds">"</span></span>
+      }
+    }
+  }
+}</pre></div>
+<ul>
+<li>对于一个或者两个字的模糊搜索我们采用term的方式</li>
+</ul>
+<div class="highlight highlight-source-json"><pre class="notranslate"><span class="pl-ii">//query dsl</span>
+{
+  <span class="pl-ent">"query"</span>: {
+    <span class="pl-ent">"term"</span>: {
+      <span class="pl-ent">"primary_name.ngram"</span>: {
+        <span class="pl-ent">"value"</span>: <span class="pl-s"><span class="pl-pds">"</span>社会<span class="pl-pds">"</span></span>
+      }
+    }
+  }
+}</pre></div>
+<h1>6. 真凶授首</h1>
+<p>在测试集群hl实施方案后，进行了一下es查询耗时对比</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>查询方式</th>
+<th>耗时</th>
+<th>证明</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>旧的wildcard双字模糊搜索</td>
+<td>6s</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/891e214a2131ca09a7ba079318fc89e0f3e610ff1f53f73ec0504b4faa4b20c7/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e574a684f574d33597a51314e47566a4f4467314d54426c5a6d59784e6d4a694f4749795a6a4d355a6a5a665a6c417a6256524757455a324f484e5a4e55466d553164526233706f4e6d6c5555565a4b645770474e337066564739725a573436596d39345932353452544e7962584a46617a6c49566e6872537a4645596d46704e6e686e587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/891e214a2131ca09a7ba079318fc89e0f3e610ff1f53f73ec0504b4faa4b20c7/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e574a684f574d33597a51314e47566a4f4467314d54426c5a6d59784e6d4a694f4749795a6a4d355a6a5a665a6c417a6256524757455a324f484e5a4e55466d553164526233706f4e6d6c5555565a4b645770474e337066564739725a573436596d39345932353452544e7962584a46617a6c49566e6872537a4645596d46704e6e686e587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=NWJhOWM3YzQ1NGVjODg1MTBlZmYxNmJiOGIyZjM5ZjZfZlAzbVRGWEZ2OHNZNUFmU1dRb3poNmlUUVZKdWpGN3pfVG9rZW46Ym94Y254RTNybXJFazlIVnhrSzFEYmFpNnhnXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td>耗时相差800+倍</td>
+</tr>
+<tr>
+<td>新的term双字模糊搜索</td>
+<td>6.8ms</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/b466ba19aeffadd04a7aad01c46ee713c72037b83f52d0dcec7ca02616942da7/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a5745344e5463304e5445335a474d354d6a56695a6a4e6a4e6a55314e6d45325a6d4d334d3249794e4746665430356d526c46306546646863564a6b535870725a445a6161546453656e6453575777786457314c53554a66564739725a573436596d3934593235596148467561475977543064575955687a56573979515441336245526e587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/b466ba19aeffadd04a7aad01c46ee713c72037b83f52d0dcec7ca02616942da7/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d5a5745344e5463304e5445335a474d354d6a56695a6a4e6a4e6a55314e6d45325a6d4d334d3249794e4746665430356d526c46306546646863564a6b535870725a445a6161546453656e6453575777786457314c53554a66564739725a573436596d3934593235596148467561475977543064575955687a56573979515441336245526e587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=ZWE4NTc0NTE3ZGM5MjViZjNjNjU1NmE2ZmM3M2IyNGFfT05mRlF0eFdhcVJkSXprZDZaaTdSendSWWwxdW1LSUJfVG9rZW46Ym94Y25YaHFuaGYwT0dWYUhzVW9yQTA3bERnXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>旧的wildcard单字模糊搜索</td>
+<td>700ms</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/1cfe6663fe5906038f7cf49328c02809ba01f456bc33f915175a44135785aa19/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d7a63325a44566c4e5467324e3255355a444e684e4467794d544d304e574d325a6a4e6b4d5451314d5446664e6c6f3552564e454f5746504f555a50656d7778526d6c4b543056464f55315861455652516b707a4d554e66564739725a573436596d3934593235596458524a616e68354e325a4c6232703356485a584e6b397656486c69587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/1cfe6663fe5906038f7cf49328c02809ba01f456bc33f915175a44135785aa19/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d7a63325a44566c4e5467324e3255355a444e684e4467794d544d304e574d325a6a4e6b4d5451314d5446664e6c6f3552564e454f5746504f555a50656d7778526d6c4b543056464f55315861455652516b707a4d554e66564739725a573436596d3934593235596458524a616e68354e325a4c6232703356485a584e6b397656486c69587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=Mzc2ZDVlNTg2N2U5ZDNhNDgyMTM0NWM2ZjNkMTQ1MTFfNlo5RVNEOWFPOUZPemwxRmlKT0VFOU1XaEVRQkpzMUNfVG9rZW46Ym94Y25YdXRJanh5N2ZLb2p3VHZXNk9vVHliXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td>相差100+倍</td>
+</tr>
+<tr>
+<td>新的term单字模糊搜索</td>
+<td>5.5ms</td>
+<td><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/65b77d13b49f16f36c37c7f7805b7bb823fd33210b66d9544ba23074ea8da869/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e7a6b314d57457a4e57466d4e544d354e5441794e6a566a4e5463355a4445784e7a49345a54637a4d4746664d5864565a573148536e465563574e4a63316c5954475935596e4e315a48567a546b4e7a5257567162314266564739725a573436596d39345932356f6246525265586450576e684d5a586c745a476857656a464c55456857587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/65b77d13b49f16f36c37c7f7805b7bb823fd33210b66d9544ba23074ea8da869/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4e7a6b314d57457a4e57466d4e544d354e5441794e6a566a4e5463355a4445784e7a49345a54637a4d4746664d5864565a573148536e465563574e4a63316c5954475935596e4e315a48567a546b4e7a5257567162314266564739725a573436596d39345932356f6246525265586450576e684d5a586c745a476857656a464c55456857587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=Nzk1MWEzNWFmNTM5NTAyNjVjNTc5ZDExNzI4ZTczMGFfMXdVZW1HSnFUcWNJc1lYTGY5YnN1ZHVzTkNzRWVqb1BfVG9rZW46Ym94Y25obFRReXdPWnhMZXltZGhWejFLUEhWXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></td>
+<td></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>上表中对比的仅仅是一个字段的模糊搜索。实际使用中，一次查询中可能会包含多个模糊查询</p>
+<p><strong>上线后的真实效果</strong></p>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/21aeffdfd54150051684f5d03bc2771ac16e9058a8cbd315bb5b322f14ec797d/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4f54646d4d3259345a4745774d47497859325a6a596d52694e6a4534595451324e324d354f5442685a544666523156364e55686b64556436526d4e5562334242616e4252545468316458526c5a6a4a4b6346525753575666564739725a573436596d39345932356154304a68574539795257566e54316f356357356a4e57733454305642587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/21aeffdfd54150051684f5d03bc2771ac16e9058a8cbd315bb5b322f14ec797d/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4f54646d4d3259345a4745774d47497859325a6a596d52694e6a4534595451324e324d354f5442685a544666523156364e55686b64556436526d4e5562334242616e4252545468316458526c5a6a4a4b6346525753575666564739725a573436596d39345932356154304a68574539795257566e54316f356357356a4e57733454305642587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=OTdmM2Y4ZGEwMGIxY2ZjYmRiNjE4YTQ2N2M5OTBhZTFfR1V6NUhkdUd6RmNUb3BBanBRTTh1dXRlZjJKcFRWSWVfVG9rZW46Ym94Y25aT0JhWE9yRWVnT1o5cW5jNWs4T0VBXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<p>09-15（上线前），99线</p>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/0e98a66e29261e9ef6b4c68f15bd087d55fed280fdb4e6876a3b0c7006f5cb36/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d324d7a4d6d597a4e6a6c6c5a6a4d794d6a497a4e444d344e7a56684e7a5977593255324e5746684d544e666355747165485a71556d70774f476474563074716146467561486c304d6e6851616d307764334a504f556466564739725a573436596d39345932354e624734304f54684e566a557754546b355a484a535755394a4d554a6d587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/0e98a66e29261e9ef6b4c68f15bd087d55fed280fdb4e6876a3b0c7006f5cb36/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d324d7a4d6d597a4e6a6c6c5a6a4d794d6a497a4e444d344e7a56684e7a5977593255324e5746684d544e666355747165485a71556d70774f476474563074716146467561486c304d6e6851616d307764334a504f556466564739725a573436596d39345932354e624734304f54684e566a557754546b355a484a535755394a4d554a6d587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=M2MzMmYzNjllZjMyMjIzNDM4NzVhNzYwY2U2NWFhMTNfcUtqeHZqUmpwOGdtV0tqaFFuaHl0MnhQam0wd3JPOUdfVG9rZW46Ym94Y25NbG40OThNVjUwTTk5ZHJSWU9JMUJmXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<p>09-16（上线后）,99线</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>监控时间</th>
+<th>MAX</th>
+<th>p99</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>09-15，09:00~19:00</td>
+<td>3.53 s</td>
+<td>631.12 ms</td>
+</tr>
+<tr>
+<td>09-16，09:00~19:00</td>
+<td>592.07 ms</td>
+<td>180.71 ms</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>从上面的监控数据可以看出查询接口</p>
+<ol>
+<li>p99耗时降低约 70% = 1 - ( 180ms / 600ms )</li>
+<li>不再有突刺，MAX不会超过1s，降低了约  80% = 1 - ( 600ms / 3.5s )</li>
+</ol>
+<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/fd59438373b0cd4038192ab6daf25d9ccc19641bc341ce6e9d5c8513f316c13f/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d3245784d6a4a6b5a6d5577597a517a4d3259344e6d51784f574d325a6a426c59545530596a64694e5756666546424e633146305a314a445131566d5330396b516b316d5a303879636b4a554e456446526b6477596e4a66564739725a573436596d3934593235715744465a546a52614e554a36536d5a4b526a4e344d4468344f57746a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41"><img src="https://camo.githubusercontent.com/fd59438373b0cd4038192ab6daf25d9ccc19641bc341ce6e9d5c8513f316c13f/68747470733a2f2f6279746564616e63652e6c61726b6f66666963652e636f6d2f73706163652f6170692f626f782f73747265616d2f646f776e6c6f61642f6173796e63636f64652f3f636f64653d4d3245784d6a4a6b5a6d5577597a517a4d3259344e6d51784f574d325a6a426c59545530596a64694e5756666546424e633146305a314a445131566d5330396b516b316d5a303879636b4a554e456446526b6477596e4a66564739725a573436596d3934593235715744465a546a52614e554a36536d5a4b526a4e344d4468344f57746a587a45334d6a55314d6a49324e4451364d5463794e5455794e6a49304e4639574e41" alt="img" data-canonical-src="https://bytedance.larkoffice.com/space/api/box/stream/download/asynccode/?code=M2ExMjJkZmUwYzQzM2Y4NmQxOWM2ZjBlYTU0YjdiNWVfeFBNc1F0Z1JDQ1VmS09kQk1mZ08yckJUNEdFRkdwYnJfVG9rZW46Ym94Y25qWDFZTjRaNUJ6SmZKRjN4MDh4OWtjXzE3MjU1MjI2NDQ6MTcyNTUyNjI0NF9WNA" style="max-width: 100%;"></a></p>
+<p>上线前后两天失败率</p></div>
+<div style="font-size:small;margin-top:8px;float:right;"></div>
+
+<button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">评论</button>
+<div class="comments" id="comments"></div>
+
+</div>
+    <div id="footer"><div id="footer1">Copyright © <span id="copyrightYear"></span> <a href="https://chenqx33.github.io">浮生半日</a></div>
+<div id="footer2">
+    <span id="runday"></span><span>Powered by <a href="https://meekdai.com/Gmeek.html" target="_blank">Gmeek</a></span>
+</div>
+
+<script>
+var now=new Date();
+document.getElementById("copyrightYear").innerHTML=now.getFullYear();
+
+if(""!=""){
+    var startSite=new Date("");
+    var diff=now.getTime()-startSite.getTime();
+    var diffDay=Math.floor(diff/(1000*60*60*24));
+    document.getElementById("runday").innerHTML="网站运行"+diffDay+"天"+" • ";
+}
+</script></div>
+</body>
+<script>
+var IconList={'sun': 'M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V.75A.75.75 0 018 0zm0 13a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 018 13zM2.343 2.343a.75.75 0 011.061 0l1.06 1.061a.75.75 0 01-1.06 1.06l-1.06-1.06a.75.75 0 010-1.06zm9.193 9.193a.75.75 0 011.06 0l1.061 1.06a.75.75 0 01-1.06 1.061l-1.061-1.06a.75.75 0 010-1.061zM16 8a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0116 8zM3 8a.75.75 0 01-.75.75H.75a.75.75 0 010-1.5h1.5A.75.75 0 013 8zm10.657-5.657a.75.75 0 010 1.061l-1.061 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zm-9.193 9.193a.75.75 0 010 1.06l-1.06 1.061a.75.75 0 11-1.061-1.06l1.06-1.061a.75.75 0 011.061 0z', 'moon': 'M9.598 1.591a.75.75 0 01.785-.175 7 7 0 11-8.967 8.967.75.75 0 01.961-.96 5.5 5.5 0 007.046-7.046.75.75 0 01.175-.786zm1.616 1.945a7 7 0 01-7.678 7.678 5.5 5.5 0 107.678-7.678z', 'sync': 'M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z', 'home': 'M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z', 'github': 'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z', 'copy': 'M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z', 'check': 'M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z'};
+var utterancesLoad=0;
+
+let themeSettings={
+    "dark": ["dark","moon","#00f0ff","dark-blue"],
+    "light": ["light","sun","#ff5000","github-light"],
+    "auto": ["auto","sync","","preferred-color-scheme"]
+};
+function changeTheme(mode, icon, color, utheme){
+    document.documentElement.setAttribute("data-color-mode",mode);
+    document.getElementById("themeSwitch").setAttribute("d",value=IconList[icon]);
+    document.getElementById("themeSwitch").parentNode.style.color=color;
+    if(utterancesLoad==1){utterancesTheme(utheme);}
+}
+function modeSwitch(){
+    let currentMode=document.documentElement.getAttribute('data-color-mode');
+    let newMode = currentMode === "light" ? "dark" : currentMode === "dark" ? "auto" : "light";
+    localStorage.setItem("meek_theme", newMode);
+    if(themeSettings[newMode]){
+        changeTheme(...themeSettings[newMode]);
+    }
+}
+function utterancesTheme(theme){
+    const message={type:'set-theme',theme: theme};
+    const iframe=document.getElementsByClassName('utterances-frame')[0];
+    iframe.contentWindow.postMessage(message,'https://utteranc.es');
+}
+if(themeSettings[theme]){changeTheme(...themeSettings[theme]);}
+console.log("\n %c Gmeek last https://github.com/Meekdai/Gmeek \n","padding:5px 0;background:#02d81d;color:#fff");
+</script>
+
+<script>
+document.getElementById("pathHome").setAttribute("d",IconList["home"]);
+document.getElementById("pathIssue").setAttribute("d",IconList["github"]);
+
+
+
+function openComments(){
+    cm=document.getElementById("comments");
+    cmButton=document.getElementById("cmButton");
+    cmButton.innerHTML="loading";
+    span=document.createElement("span");
+    span.setAttribute("class","AnimatedEllipsis");
+    cmButton.appendChild(span);
+
+    script=document.createElement("script");
+    script.setAttribute("src","https://utteranc.es/client.js");
+    script.setAttribute("repo","chenqx33/chenqx33.github.io");
+    script.setAttribute("issue-term","title");
+    
+    if(localStorage.getItem("meek_theme")=="dark"){script.setAttribute("theme","dark-blue");}
+    else if(localStorage.getItem("meek_theme")=="light") {script.setAttribute("theme","github-light");}
+    else{script.setAttribute("theme","preferred-color-scheme");}
+    
+    script.setAttribute("crossorigin","anonymous");
+    script.setAttribute("async","");
+    cm.appendChild(script);
+
+    int=self.setInterval("iFrameLoading()",200);
+}
+
+function iFrameLoading(){
+    var utterances=document.getElementsByClassName('utterances');
+    if(utterances.length==1){
+        if(utterances[0].style.height!=""){
+            utterancesLoad=1;
+            int=window.clearInterval(int);
+            document.getElementById("cmButton").style.display="none";
+            console.log("utterances Load OK");
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const createClipboardHTML = (codeContent, additionalClasses = '') => `
+        <pre class="notranslate"><code class="notranslate">${codeContent}</code></pre>
+        <div class="clipboard-container position-absolute right-0 top-0 ${additionalClasses}">
+            <clipboard-copy class="ClipboardButton btn m-2 p-0" role="button" style="display: inherit;">
+                <svg height="16" width="16" class="octicon octicon-copy m-2"><path d="${IconList["copy"]}"></path></svg>
+                <svg height="16" width="16" class="octicon octicon-check color-fg-success m-2 d-none"><path d="${IconList["check"]}"></path></svg>
+            </clipboard-copy>
+            <div class="copy-feedback">Copied!</div>
+        </div>
+    `;
+
+    const handleCodeElements = (selector = '') => {
+        document.querySelectorAll(selector).forEach(codeElement => {
+            const codeContent = codeElement.innerHTML;
+            const newStructure = document.createElement('div');
+            newStructure.className = 'snippet-clipboard-content position-relative overflow-auto';
+            newStructure.innerHTML = createClipboardHTML(codeContent);
+
+            const parentElement = codeElement.parentElement;
+            if (selector.includes('highlight')) {
+                parentElement.insertBefore(newStructure, codeElement.nextSibling);
+                parentElement.removeChild(codeElement);
+            } else {
+                parentElement.parentElement.replaceChild(newStructure, parentElement);
+            }
+        });
+    };
+
+    handleCodeElements('pre.notranslate > code.notranslate');
+    handleCodeElements('div.highlight > pre.notranslate');
+
+    let currentFeedback = null;
+    document.querySelectorAll('clipboard-copy').forEach(copyButton => {
+        copyButton.addEventListener('click', () => {
+            const codeContent = copyButton.closest('.snippet-clipboard-content').innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = codeContent;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            const copyIcon = copyButton.querySelector('.octicon-copy');
+            const checkIcon = copyButton.querySelector('.octicon-check');
+            const copyFeedback = copyButton.nextElementSibling;
+
+            if (currentFeedback && currentFeedback !== copyFeedback) {currentFeedback.style.display = 'none';}
+            currentFeedback = copyFeedback;
+
+            copyIcon.classList.add('d-none');
+            checkIcon.classList.remove('d-none');
+            copyFeedback.style.display = 'block';
+            copyButton.style.borderColor = 'var(--color-success-fg)';
+
+            setTimeout(() => {
+                copyIcon.classList.remove('d-none');
+                checkIcon.classList.add('d-none');
+                copyFeedback.style.display = 'none';
+                copyButton.style.borderColor = '';
+            }, 2000);
+        });
+    });
+});
+
+</script>
+
+
+</html>
